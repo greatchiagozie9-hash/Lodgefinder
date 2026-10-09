@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LodgeFinder — Student Accommodation Finder for FUTO</title>
+  <link rel="stylesheet" href="Lodgefinder.css">
+  <!-- Supabase CDN Client Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Top Demo / Safety Notice -->
+  <div class="demo-banner">
+    <div>
+      <strong>Notice:</strong> Currently in <em>Live Demonstration Mode</em> with verified mock student lodges for FUTO (Eziobodo & Umuchima).
+    </div>
+    <div>
+      <a href="javascript:void(0)" onclick="app.showSupabaseModal()">Connect Live Supabase Database</a>
+    </div>
+  </div>
+
+  <!-- Main Navigation -->
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="#home" class="brand-logo" onclick="app.navigate('home')">
+        LodgeFinder<span>FUTO</span>
+      </a>
+
+      <button class="hamburger" id="navToggleBtn" aria-label="Toggle navigation">☰</button>
+
+      <ul class="nav-menu" id="navMenu">
+        <li><a href="#home" class="nav-link active" onclick="app.navigate('home')">Home</a></li>
+        <li><a href="#all-lodges" class="nav-link" onclick="app.navigate('lodges')">Find a Lodge</a></li>
+        <li><a href="#all-lodges?area=Eziobodo" class="nav-link" onclick="app.filterByArea('Eziobodo')">Eziobodo</a></li>
+        <li><a href="#all-lodges?area=Umuchima" class="nav-link" onclick="app.filterByArea('Umuchima')">Umuchima</a></li>
+        <li><a href="#list-lodge" class="nav-link" onclick="app.navigate('list-lodge')">List Your Lodge</a></li>
+        <li><a href="#admin" class="nav-link" onclick="app.navigate('admin')">Admin</a></li>
+        <li><button class="btn btn-secondary" onclick="app.navigate('lodges')">Find a Lodge</button></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ========================================== -->
+  <!-- PAGE 1: HOMEPAGE VIEW                      -->
+  <!-- ========================================== -->
+  <section id="view-home" class="page-view active">
+    <!-- Hero Section -->
+    <header class="hero">
+      <div class="container">
+        <h1>Find Your Perfect Lodge Near FUTO.</h1>
+        <p>Discover affordable student accommodation in Eziobodo and Umuchima. Compare prices, explore facilities, and contact landlords directly.</p>
+        
+        <div class="hero-actions">
+          <button class="btn btn-secondary" onclick="app.navigate('lodges')">Explore Lodges</button>
+          <button class="btn btn-outline" style="color:#ffffff; border-color:#ffffff;" onclick="app.navigate('list-lodge')">List Your Lodge</button>
+        </div>
+
+        <!-- Main Search Component -->
+        <div class="search-card">
+          <form id="heroSearchForm" onsubmit="app.handleHeroSearch(event)">
+            <div class="search-grid">
+              <div class="search-group">
+                <label>Area</label>
+                <select id="heroArea">
+                  <option value="All">All Areas</option>
+                  <option value="Eziobodo">Eziobodo</option>
+                  <option value="Umuchima">Umuchima</option>
+                </select>
+              </div>
+
+              <div class="search-group">
+                <label>Accommodation Type</label>
+                <select id="heroType">
+                  <option value="All">All Types</option>
+                  <option value="Self-Contain">Self-Contain</option>
+                  <option value="Single Room">Single Room</option>
+                  <option value="One-Bedroom Apartment">One-Bedroom Apartment</option>
+                  <option value="Two-Bedroom Apartment">Two-Bedroom Apartment</option>
+                  <option value="Shared Accommodation">Shared Accommodation</option>
+                </select>
+              </div>
+
+              <div class="search-group">
+                <label>Min Budget</label>
+                <select id="heroMinBudget">
+                  <option value="0">Any Budget</option>
+                  <option value="50000">₦50,000</option>
+                  <option value="80000">₦80,000</option>
+                  <option value="100000">₦100,000</option>
+                  <option value="150000">₦150,000</option>
+                  <option value="200000">₦200,000</option>
+                </select>
+              </div>
+
+              <div class="search-group">
+                <label>Max Budget</label>
+                <select id="heroMaxBudget">
+                  <option value="99999999">No Maximum</option>
+                  <option value="80000">₦80,000</option>
+                  <option value="100000">₦100,000</option>
+                  <option value="150000">₦150,000</option>
+                  <option value="200000">₦200,000</option>
+                  <option value="300000">₦300,000</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Facilities Checklist -->
+            <div class="facilities-checklist">
+              <label><input type="checkbox" id="heroFeatWater"> Running Water</label>
+              <label><input type="checkbox" id="heroFeatLight"> Electricity</label>
+              <label><input type="checkbox" id="heroFeatToilet"> Private Toilet</label>
+              <label><input type="checkbox" id="heroFeatKitchen"> Kitchen</label>
+              <label><input type="checkbox" id="heroFeatFence"> Fenced Compound</label>
+              <button type="submit" class="btn btn-primary" style="margin-left:auto;">Search Lodges</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <!-- Featured Lodges Section -->
+    <section class="section-padding">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Featured Lodges Around FUTO</h2>
+            <p class="section-subtitle">Carefully reviewed student accommodations in Eziobodo and Umuchima.</p>
+          </div>
+          <button class="btn btn-outline" onclick="app.navigate('lodges')">View All Listings →</button>
+        </div>
+
+        <div class="lodges-grid" id="featuredLodgesGrid">
+          <!-- Rendered via JavaScript -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Browse By Area -->
+    <section class="section-padding" style="background:#ffffff; border-top:1px solid var(--border-color);">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Browse By Campus Community</h2>
+            <p class="section-subtitle">Select where you prefer to stay close to FUTO gates.</p>
+          </div>
+        </div>
+
+        <div class="area-cards-grid">
+          <div class="area-card" style="background-image: url('https://images.unsplash.com/photo-1541888946425-d0fbb186f5f7?auto=format&fit=crop&w=800&q=80');">
+            <div class="area-card-content">
+              <h3>Eziobodo</h3>
+              <p>Explore high student density accommodations and commercial centres near Eziobodo gate.</p>
+              <button class="btn btn-secondary" style="margin-top:1rem;" onclick="app.filterByArea('Eziobodo')">Explore Eziobodo</button>
+            </div>
+          </div>
+
+          <div class="area-card" style="background-image: url('https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80');">
+            <div class="area-card-content">
+              <h3>Umuchima</h3>
+              <p>Find peaceful, affordable accommodations in close proximity to FUTO Umuchima back-gate.</p>
+              <button class="btn btn-secondary" style="margin-top:1rem;" onclick="app.filterByArea('Umuchima')">Explore Umuchima</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="section-padding">
+      <div class="container">
+        <div class="section-header" style="justify-content:center; text-align:center;">
+          <div>
+            <h2 class="section-title">How LodgeFinder Works</h2>
+            <p class="section-subtitle">Find your off-campus home in three simple steps.</p>
+          </div>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-number">1</div>
+            <h3>Search</h3>
+            <p style="color:var(--text-muted); margin-top:0.5rem;">Choose your preferred area in Eziobodo or Umuchima, your target budget, and desired room type.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">2</div>
+            <h3>Compare</h3>
+            <p style="color:var(--text-muted); margin-top:0.5rem;">Explore authentic property pictures, transparent total fees breakdown, and confirmed facilities.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">3</div>
+            <h3>Contact</h3>
+            <p style="color:var(--text-muted); margin-top:0.5rem;">Reach the caretaker directly via pre-filled WhatsApp links or schedule a physical inspection tour.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust and Safety -->
+    <section class="section-padding trust-section">
+      <div class="container">
+        <h2 class="section-title">Find Your Next Lodge With Confidence</h2>
+        <p class="section-subtitle" style="margin-top:0.5rem;">Our priority is student protection. All listings pass through manual administrative review prior to publishing.</p>
+
+        <div class="trust-grid">
+          <div class="trust-item">
+            <h4>Curated & Reviewed</h4>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.3rem;">Every submission is screened by our team before it appears publicly.</p>
+          </div>
+          <div class="trust-item">
+            <h4>Free On-site Inspections</h4>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.3rem;">Schedule a verified inspection visit before parting with any money.</p>
+          </div>
+          <div class="trust-item">
+            <h4>Direct Caretaker Contacts</h4>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.3rem;">Cut through middlemen; communicate directly with legitimate handlers.</p>
+          </div>
+          <div class="trust-item">
+            <h4>Pay Zero Advance Fee</h4>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0.3rem;">Students are advised: NEVER make deposits before seeing the lodge in person.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- PAGE 2: ALL LODGES / SEARCH RESULTS        -->
+  <!-- ========================================== -->
+  <section id="view-lodges" class="page-view">
+    <div class="container">
+      <div class="search-page-layout">
+        <!-- Sidebar Filters -->
+        <aside class="filters-sidebar">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3>Filter Lodges</h3>
+            <button class="btn btn-outline" style="padding:0.3rem 0.6rem; font-size:0.75rem;" onclick="app.resetFilters()">Reset</button>
+          </div>
+
+          <div class="filter-group">
+            <label>Search Keyword</label>
+            <input type="text" id="filterKeyword" placeholder="Lodge name, street, etc." oninput="app.applyFilters()">
+          </div>
+
+          <div class="filter-group">
+            <label>Campus Area</label>
+            <select id="filterArea" onchange="app.applyFilters()">
+              <option value="All">All Areas</option>
+              <option value="Eziobodo">Eziobodo</option>
+              <option value="Umuchima">Umuchima</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Room Category</label>
+            <select id="filterType" onchange="app.applyFilters()">
+              <option value="All">All Types</option>
+              <option value="Self-Contain">Self-Contain</option>
+              <option value="Single Room">Single Room</option>
+              <option value="One-Bedroom Apartment">One-Bedroom Apartment</option>
+              <option value="Two-Bedroom Apartment">Two-Bedroom Apartment</option>
+              <option value="Shared Accommodation">Shared Accommodation</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Max Budget (₦)</label>
+            <select id="filterMaxPrice" onchange="app.applyFilters()">
+              <option value="99999999">Any Budget</option>
+              <option value="80000">Up to ₦80,000</option>
+              <option value="100000">Up to ₦100,000</option>
+              <option value="150000">Up to ₦150,000</option>
+              <option value="200000">Up to ₦200,000</option>
+              <option value="300000">Up to ₦300,000</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Facilities Required</label>
+            <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.4rem; font-size:0.88rem;">
+              <label><input type="checkbox" id="fWater" onchange="app.applyFilters()"> Running Water</label>
+              <label><input type="checkbox" id="fLight" onchange="app.applyFilters()"> Steady Light</label>
+              <label><input type="checkbox" id="fToilet" onchange="app.applyFilters()"> Private Toilet</label>
+              <label><input type="checkbox" id="fKitchen" onchange="app.applyFilters()"> Dedicated Kitchen</label>
+              <label><input type="checkbox" id="fFence" onchange="app.applyFilters()"> Fenced / Secured Gate</label>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main Listings Content -->
+        <main>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <h2>Approved Lodges</h2>
+              <p style="color:var(--text-muted); font-size:0.9rem;" id="resultsCount">Showing all listings</p>
+            </div>
+            <div>
+              <label style="font-size:0.85rem; font-weight:600; margin-right:0.5rem;">Sort By:</label>
+              <select id="sortBy" onchange="app.applyFilters()" style="padding:0.4rem 0.8rem; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                <option value="newest">Newest First</option>
+                <option value="price-asc">Lowest Price</option>
+                <option value="price-desc">Highest Price</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="lodges-grid" id="allLodgesGrid">
+            <!-- Lodges dynamically injected -->
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- PAGE 3: SINGLE LODGE DETAILS               -->
+  <!-- ========================================== -->
+  <section id="view-details" class="page-view">
+    <div class="container lodge-details-wrap" id="lodgeDetailsContainer">
+      <!-- Populated via renderDetailsPage() in app.js -->
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- PAGE 4: LIST YOUR LODGE                    -->
+  <!-- ========================================== -->
+  <section id="view-list-lodge" class="page-view">
+    <div class="container">
+      <div class="form-card">
+        <h2 style="margin-bottom:0.35rem;">List Your Lodge on LodgeFinder</h2>
+        <p style="color:var(--text-muted); margin-bottom:2rem;">Connect your property directly with FUTO students looking for accommodation.</p>
+
+        <form id="submitLodgeForm" onsubmit="app.handleLodgeSubmission(event)">
+          <div class="form-grid">
+            <div class="form-control full-width">
+              <label>Lodge Name / Property Title *</label>
+              <input type="text" id="subTitle" required placeholder="e.g. Royal Grace Villa Self-Con">
+            </div>
+
+            <div class="form-control">
+              <label>Campus Area *</label>
+              <select id="subArea" required>
+                <option value="">Select Area</option>
+                <option value="Eziobodo">Eziobodo</option>
+                <option value="Umuchima">Umuchima</option>
+              </select>
+            </div>
+
+            <div class="form-control">
+              <label>Accommodation Category *</label>
+              <select id="subType" required>
+                <option value="Self-Contain">Self-Contain</option>
+                <option value="Single Room">Single Room</option>
+                <option value="One-Bedroom Apartment">One-Bedroom Apartment</option>
+                <option value="Two-Bedroom Apartment">Two-Bedroom Apartment</option>
+                <option value="Shared Accommodation">Shared Accommodation</option>
+              </select>
+            </div>
+
+            <div class="form-control">
+              <label>Annual Rent (₦) *</label>
+              <input type="number" id="subRent" required placeholder="e.g. 150000" min="10000">
+            </div>
+
+            <div class="form-control">
+              <label>Caution Fee (₦)</label>
+              <input type="number" id="subCaution" placeholder="e.g. 15000">
+            </div>
+
+            <div class="form-control">
+              <label>Agency Fee (₦)</label>
+              <input type="number" id="subAgency" placeholder="e.g. 10000">
+            </div>
+
+            <div class="form-control">
+              <label>Agreement / Legal Fee (₦)</label>
+              <input type="number" id="subAgreement" placeholder="e.g. 5000">
+            </div>
+
+            <div class="form-control">
+              <label>Other Mandatory Fees (₦)</label>
+              <input type="number" id="subOtherFees" placeholder="e.g. 10000 for waste/security">
+            </div>
+
+            <div class="form-control">
+              <label>Landmark / Exact Address *</label>
+              <input type="text" id="subAddress" required placeholder="Near Salvation Ministries, Eziobodo">
+            </div>
+
+            <div class="form-control full-width">
+              <label>Property Description *</label>
+              <textarea id="subDescription" required placeholder="Provide helpful details on water schedule, compound serenity, and room tiling..."></textarea>
+            </div>
+
+            <div class="form-control full-width">
+              <label>Facilities Available</label>
+              <div style="display:flex; flex-wrap:wrap; gap:1.2rem; margin-top:0.35rem;">
+                <label><input type="checkbox" id="subWater"> Running Water</label>
+                <label><input type="checkbox" id="subLight"> Steady Light</label>
+                <label><input type="checkbox" id="subToilet"> Private Toilet</label>
+                <label><input type="checkbox" id="subKitchen"> Dedicated Kitchen</label>
+                <label><input type="checkbox" id="subFence"> Fenced Compound</label>
+              </div>
+            </div>
+
+            <div class="form-control">
+              <label>Landlord / Caretaker Full Name *</label>
+              <input type="text" id="subLandlordName" required placeholder="Mr. Kingsley Okonkwo">
+            </div>
+
+            <div class="form-control">
+              <label>Phone Number *</label>
+              <input type="tel" id="subPhone" required placeholder="08012345678">
+            </div>
+
+            <div class="form-control">
+              <label>WhatsApp Number (If different)</label>
+              <input type="tel" id="subWhatsapp" placeholder="08012345678">
+            </div>
+
+            <div class="form-control">
+              <label>Email Address</label>
+              <input type="email" id="subEmail" placeholder="caretaker@gmail.com">
+            </div>
+
+            <div class="form-control full-width">
+              <label>Property Photographs (Select up to 4 images)</label>
+              <input type="file" id="subImages" accept="image/*" multiple onchange="app.handleImageSelection(event)">
+              <div id="imagePreviewContainer" style="display:flex; gap:0.5rem; margin-top:0.75rem; flex-wrap:wrap;"></div>
+            </div>
+
+            <div class="full-width" style="margin-top:1rem;">
+              <button type="submit" class="btn btn-secondary" style="width:100%; padding:0.9rem;">Submit Property for Review</button>
+              <p style="font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top:0.5rem;">
+                Security Note: Listings start in <strong>Pending</strong> status until verified by our admin team.
+              </p>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================== -->
+  <!-- PAGE 5: ADMINISTRATOR DASHBOARD            -->
+  <!-- ========================================== -->
+  <section id="view-admin" class="page-view">
+    <div class="container" style="padding: 3rem 0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
+        <div>
+          <h2>Administrator Portal</h2>
+          <p style="color:var(--text-muted);">Manage incoming properties, approve valid lodges, and review tour requests.</p>
+        </div>
+        <div id="adminAuthControls">
+          <!-- Populated by JS based on login state -->
+        </div>
+      </div>
+
+      <!-- Admin Stat Boxes -->
+      <div class="dashboard-header-stats">
+        <div class="stat-box">
+          <h4>Total Properties</h4>
+          <p id="statTotal">0</p>
+        </div>
+        <div class="stat-box">
+          <h4>Pending Approval</h4>
+          <p id="statPending" style="color:var(--accent-gold);">0</p>
+        </div>
+        <div class="stat-box">
+          <h4>Approved Lodges</h4>
+          <p id="statApproved" style="color:var(--secondary);">0</p>
+        </div>
+        <div class="stat-box">
+          <h4>Tour Inquiries</h4>
+          <p id="statInspections">0</p>
+        </div>
+      </div>
+
+      <!-- Listings Management Table -->
+      <h3 style="margin-bottom:1rem;">Property Moderation Queue</h3>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Area</th>
+              <th>Rent (₦)</th>
+              <th>Landlord</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminTableBody">
+            <!-- Populated via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Inspection Requests Table -->
+      <h3 style="margin:2.5rem 0 1rem 0;">Student Inspection Bookings</h3>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Student Name</th>
+              <th>Phone</th>
+              <th>Lodge ID / Name</th>
+              <th>Preferred Date</th>
+              <th>Message</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="adminInspectionsBody">
+            <!-- Injected via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Inspection Modal -->
+  <div class="modal-overlay" id="inspectionModal">
+    <div class="modal-box">
+      <button class="modal-close-btn" onclick="app.closeInspectionModal()">×</button>
+      <h3>Request Lodge Inspection</h3>
+      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.25rem;">
+        Schedule a physical walk-through before paying any fees.
+      </p>
+
+      <form id="inspectionForm" onsubmit="app.submitInspectionRequest(event)">
+        <input type="hidden" id="inspLodgeId">
+        <div class="form-control" style="margin-bottom:1rem;">
+          <label>Your Full Name *</label>
+          <input type="text" id="inspName" required placeholder="e.g. Chinedu Eze">
+        </div>
+        <div class="form-control" style="margin-bottom:1rem;">
+          <label>WhatsApp / Phone Number *</label>
+          <input type="tel" id="inspPhone" required placeholder="08012345678">
+        </div>
+        <div class="form-control" style="margin-bottom:1rem;">
+          <label>Preferred Visit Date *</label>
+          <input type="date" id="inspDate" required>
+        </div>
+        <div class="form-control" style="margin-bottom:1.5rem;">
+          <label>Questions / Special Requests (Optional)</label>
+          <textarea id="inspMsg" placeholder="e.g. Can I inspect around 4:00 PM after lectures?"></textarea>
+        </div>
+        <button type="submit" class="btn btn-secondary" style="width:100%;">Confirm Inspection Request</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Supabase Credentials / Connection Modal -->
+  <div class="modal-overlay" id="supabaseModal">
+    <div class="modal-box">
+      <button class="modal-close-btn" onclick="app.closeSupabaseModal()">×</button>
+      <h3>Supabase Database Configuration</h3>
+      <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.25rem;">
+        Enter your Supabase credentials to switch from <em>Local Demo Mode</em> to your live PostgreSQL database.
+      </p>
+
+      <form onsubmit="app.saveSupabaseConfig(event)">
+        <div class="form-control" style="margin-bottom:1rem;">
+          <label>Supabase Project URL</label>
+          <input type="url" id="sbUrl" placeholder="https://xyzcompany.supabase.co" required>
+        </div>
+        <div class="form-control" style="margin-bottom:1.5rem;">
+          <label>Supabase Anon Public Key</label>
+          <input type="text" id="sbKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Connect & Initialize Supabase</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="brand-logo" style="color:#ffffff; margin-bottom:1rem;">
+            LodgeFinder<span style="color:var(--secondary);">FUTO</span>
+          </div>
+          <p style="font-size:0.9rem; line-height:1.7;">
+            The student-first accommodation directory designed specifically for the Federal University of Technology, Owerri (FUTO).
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Campus Hubs</h4>
+          <ul>
+            <li><a href="#all-lodges?area=Eziobodo" onclick="app.filterByArea('Eziobodo')">Eziobodo Lodges</a></li>
+            <li><a href="#all-lodges?area=Umuchima" onclick="app.filterByArea('Umuchima')">Umuchima Lodges</a></li>
+            <li><a href="#all-lodges" onclick="app.navigate('lodges')">All Accommodations</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Landlords</h4>
+          <ul>
+            <li><a href="#list-lodge" onclick="app.navigate('list-lodge')">List Your Property</a></li>
+            <li><a href="#admin" onclick="app.navigate('admin')">Admin Login</a></li>
+            <li><a href="javascript:void(0)" onclick="app.showSupabaseModal()">Database Setup</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Support & Safety</h4>
+          <p style="font-size:0.88rem; margin-bottom:0.75rem;">
+            Questions? Contact our student rep support desk at <code>support@lodgefinder-futo.demo</code>
+          </p>
+          <p style="font-size:0.8rem; color:#64748b;">
+            Always confirm accommodation physical conditions before transferring money.
+          </p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        &copy; 2026 LodgeFinder FUTO. Built for FUTOites. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Main JavaScript File -->
+  <script src="app.js"></script>
+</body>
+</html>
